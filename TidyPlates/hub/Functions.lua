@@ -233,7 +233,7 @@ end
 -- By Threat (High)
 local function AlphaFunctionByThreatHigh(unit)
 	if InCombatLockdown() and unit.reaction == "HOSTILE" then
-		if unit.threatValue > 1 and unit.health > 0 then
+		if unit.threatValue and unit.health and unit.threatValue > 1 and unit.health > 0 then
 			return LocalVars.OpacitySpotlight
 		end
 	end
@@ -245,7 +245,7 @@ local function AlphaFunctionByThreatLow(unit)
 		if IsTankedByAnotherTank(unit) then
 			return
 		end
-		if unit.threatValue < 2 and unit.health > 0 then
+		if unit.threatValue and unit.health and unit.threatValue < 2 and unit.health > 0 then
 			return LocalVars.OpacitySpotlight
 		end
 	end
@@ -297,7 +297,7 @@ local function AlphaFilter(unit)
 	elseif LocalVars.OpacityFilterNonElite and (not unit.isElite) then
 		return true
 	elseif LocalVars.OpacityFilterInactive then
-		if unit.reaction ~= "FRIENDLY" and not (unit.isInCombat or unit.threatValue > 0 or unit.health < unit.healthmax) then
+		if unit.reaction ~= "FRIENDLY" and not (unit.isInCombat or (unit.threatValue and unit.threatValue > 0) or (unit.health and unit.healthmax and unit.health < unit.healthmax)) then
 			return true
 		end
 	end
@@ -341,6 +341,7 @@ end
 
 local function AlphaDelegate(...)
 	local unit = ...
+	if not unit then return end
 	local alpha
 
 	if unit.isTarget then

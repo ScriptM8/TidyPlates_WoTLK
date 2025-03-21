@@ -329,7 +329,8 @@ do
 	function UpdateIndicator_CustomAlpha()
 		if activetheme.SetAlpha then
 			local previousAlpha = extended.requestedAlpha
-			extended.requestedAlpha = activetheme.SetAlpha(unit) or previousAlpha or unit.alpha or 1
+			local computedAlpha = activetheme.SetAlpha(unit)
+			extended.requestedAlpha = computedAlpha or previousAlpha or unit.alpha or 1
 		else
 			extended.requestedAlpha = unit.alpha or 1
 		end
