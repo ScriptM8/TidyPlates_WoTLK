@@ -9,6 +9,7 @@
 <Script file="TidyPlatesPanel.lua"/>
 <Script file="TidyPlatesMinimapButton.lua"/>
 <Script file="TidyPlatesSpellCastMonitor.lua"/>
+<Script file="TidyPlatesDamageFloatingText.lua"/>
 <Include file="TidyPlatesWidgets.xml" />
 <Include file="TidyPlatesHub.xml" />
 </Ui>

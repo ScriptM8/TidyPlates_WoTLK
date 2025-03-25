@@ -47,7 +47,8 @@ TidyPlatesOptions = {
 	EnemyAutomation = L["No Automation"],
 	EnableCastWatcher = false,
 	WelcomeShown = false,
-	EnableMinimapButton = false
+	EnableMinimapButton = false,
+	ShowDamageText = true
 }
 
 local TidyPlatesOptionsDefaults = copytable(TidyPlatesOptions)
@@ -288,6 +289,13 @@ local function ActivateInterfacePanel()
 	panel.EnableMinimapButton:SetPoint("TOPLEFT", panel.EnableCastWatcher, "TOPLEFT", 0, -35)
 	panel.EnableMinimapButton:SetScript("OnClick", function(self) ShowMinimapButton(self:GetChecked()) end)
 
+	-- Show Damage Text Checkbox
+	panel.ShowDamageText = PanelHelpers:CreateCheckButton("TidyPlatesOptions_ShowDamageText", panel, L["Show Damage Text"])
+	panel.ShowDamageText:SetPoint("TOPLEFT", panel.EnableMinimapButton, "TOPLEFT", 0, -35)
+	panel.ShowDamageText:SetScript("OnClick", function(self)
+		TidyPlatesOptions.ShowDamageText = self:GetChecked()
+	end)
+
 	-- Reset
 	ResetButton = CreateFrame("Button", "TidyPlatesOptions_ResetButton", panel, "UIPanelButtonTemplate2")
 	ResetButton:SetPoint("BOTTOMRIGHT", -16, 8)
@@ -304,6 +312,7 @@ local function ActivateInterfacePanel()
 		panel.SecondarySpecTheme:SetValue(TidyPlatesOptions.secondary)
 		panel.EnableCastWatcher:SetChecked(TidyPlatesOptions.EnableCastWatcher)
 		panel.EnableMinimapButton:SetChecked(TidyPlatesOptions.EnableMinimapButton)
+		panel.ShowDamageText:SetChecked(TidyPlatesOptions.ShowDamageText)
 		panel.AutoShowFriendly:SetValue(TidyPlatesOptions.FriendlyAutomation)
 		panel.AutoShowEnemy:SetValue(TidyPlatesOptions.EnemyAutomation)
 
@@ -383,6 +392,7 @@ ApplyPanelSettings = function()
 	TidyPlatesOptions.EnemyAutomation = panel.AutoShowEnemy:GetValue()
 	TidyPlatesOptions.EnableCastWatcher = panel.EnableCastWatcher:GetChecked()
 	TidyPlatesOptions.EnableMinimapButton = panel.EnableMinimapButton:GetChecked()
+	TidyPlatesOptions.ShowDamageText = panel.ShowDamageText:GetChecked()
 
 	-- Clear Widgets
 	if TidyPlatesWidgets then

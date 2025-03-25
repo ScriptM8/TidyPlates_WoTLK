@@ -637,6 +637,12 @@ do
 		bars.castbar:Hide()
 		unit.isCasting = false
 
+		-- 🧼 Clear damage text if it exists
+		if extended.DamageText then
+			extended.DamageText:Hide()
+			extended.DamageText:SetText("")
+		end
+
 		PlatesVisible[plate] = nil
 		extended.unit = ClearIndices(extended.unit)
 		extended.unitcache = ClearIndices(extended.unitcache)
@@ -1309,3 +1315,127 @@ TidyPlates.OnUpdateHealthRange = OnUpdateHealthRange
 TidyPlates.OnMouseoverNameplate = OnMouseoverNameplate
 TidyPlates.OnRequestWidgetUpdate = OnRequestWidgetUpdate
 TidyPlates.OnRequestDelegateUpdate = OnRequestDelegateUpdate
+
+local function ShowDamageTextOnPlate(guid, amount, spellID, spellName)
+    local plate = TidyPlates.NameplatesByGUID[guid]
+    if not plate or not plate.extended then return end
+
+    local extended = plate.extended
+    if not extended.unit or extended.unit.guid ~= guid then return end
+
+    -- Create damage text
+    if not extended.DamageText then
+        local text = extended:CreateFontString(nil, "OVERLAY")
+        text:SetFont("Fonts\\FRIZQT__.TTF", 16, "OUTLINE")
+        text:SetPoint("BOTTOM", extended, "TOP", 10, 20)
+        text:SetTextColor(1, 0.2, 0.2, 1)
+        extended.DamageText = text
+
+        -- Animation group on text
+        local ag = text:CreateAnimationGroup()
+        local fade = ag:CreateAnimation("Alpha")
+        fade:SetChange(-1)
+        fade:SetDuration(0.8)
+        fade:SetStartDelay(0.8)
+        fade:SetSmoothing("OUT")
+        ag:SetScript("OnFinished", function() text:Hide() end)
+        text.anim = ag
+    end
+
+    -- Create damage icon
+    if not extended.DamageIcon then
+        local icon = extended:CreateTexture(nil, "OVERLAY")
+        icon:SetSize(20, 20)
+        icon:SetPoint("RIGHT", extended.DamageText, "LEFT", -4, 0)
+        extended.DamageIcon = icon
+
+        -- Animation group on icon
+        local ag = icon:CreateAnimationGroup()
+        local fade = ag:CreateAnimation("Alpha")
+        fade:SetChange(-1)
+        fade:SetDuration(0.8)
+        fade:SetStartDelay(0.8)
+        fade:SetSmoothing("OUT")
+        ag:SetScript("OnFinished", function() icon:Hide() end)
+        icon.anim = ag
+    end
+
+    -- Show values
+    local text = extended.DamageText
+    text:SetText(amount)
+    text:SetAlpha(1)
+    text:Show()
+
+    local icon = extended.DamageIcon
+    icon:SetAlpha(1)
+    icon:Show()
+
+	local meleeTexture = "Interface\\Icons\\Ability_MeleeDamage"  -- or a custom one you prefer
+    local texture = spellID and select(3, GetSpellInfo(spellID))
+    if texture then
+        icon:SetTexture(texture)
+    else
+        icon:SetTexture(meleeTexture)
+    end
+
+    -- Animate both
+    if text.anim then
+        text.anim:Stop()
+        text.anim:Play()
+    end
+    if icon.anim then
+        icon.anim:Stop()
+        icon.anim:Play()
+    end
+end
+
+
+
+
+local function RegisterDamageText()
+	local frame = CreateFrame("Frame")
+	frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+	frame:SetScript("OnEvent", function(_, event, ...)
+		local arg = { ... }
+
+		if not TidyPlatesOptions or not TidyPlatesOptions.ShowDamageText then return end
+		if not arg[2] then return end
+
+		local eventType = arg[2]
+		local sourceGUID = arg[3]
+		local destGUID = arg[6]
+
+		if sourceGUID ~= UnitGUID("player") then return end
+
+		if eventType == "SPELL_DAMAGE" then
+			local spellID = arg[9]
+			local spellName = arg[10]
+			local amount = arg[12]
+
+			-- Debug:
+			DEFAULT_CHAT_FRAME:AddMessage(
+				string.format("✨ SPELL_DAMAGE: %s (%d) -> %s dmg", spellName, spellID, tostring(amount)),
+				1, 1, 0
+			)
+
+			ShowDamageTextOnPlate(destGUID, amount, spellID, spellName)
+		elseif eventType == "SWING_DAMAGE" then
+			local amount = arg[9]
+
+			-- Debug:
+			DEFAULT_CHAT_FRAME:AddMessage(
+				string.format("⚔️ SWING_DAMAGE -> %s dmg", tostring(amount)),
+				1, 1, 0
+			)
+
+			ShowDamageTextOnPlate(destGUID, amount, 0, "Melee")
+		end
+	end)
+end
+
+local startup = CreateFrame("Frame")
+startup:RegisterEvent("PLAYER_LOGIN")
+startup:SetScript("OnEvent", function()
+    RegisterDamageText()
+end)
+

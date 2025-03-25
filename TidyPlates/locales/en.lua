@@ -44,6 +44,7 @@ L["Reset Configuration"] = true
 L["|cFFFF6600Tidy Plates: |cFFFFFFFFWidget file versions do not match. This may be caused by an issue with auto-updater software."] = true
 L["Please uninstall Tidy Plates, and then re-install. You do NOT need to clear your variables."] = true
 L["|cFFFF6600Tidy Plates: |cFFFF9900No Theme is Selected. |cFF77FF00Use |cFFFFFF00/tidyplates|cFF77FF00 to bring up the Theme Selection Window."] = true
+L["Show Damage Text"] = true
 
 L.resetTidyPlanel = "%sResetting %sTidy Plates %sTheme Selection to Default"
 L.commonResetPanel = "%sResetting %sTidy Plates Hub: %s%s %sConfiguration to Default"
