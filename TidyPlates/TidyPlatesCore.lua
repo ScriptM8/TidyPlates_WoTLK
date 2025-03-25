@@ -637,15 +637,16 @@ do
 		bars.castbar:Hide()
 		unit.isCasting = false
 
+		-- in TidyPlatesCore.lua OnHideNameplate:
 		if extended.DamageWidget then
 			local dw = extended.DamageWidget
 			for _, entry in ipairs(dw.texts or {}) do
-				if entry.text.anim:IsPlaying() then entry.text.anim:Stop() end
-				entry.text:Hide()
+				entry.frame:SetScript("OnUpdate", nil)
+				entry.frame:Hide()
 			end
-			if dw.icon then dw.icon:Hide() end
 			dw.texts = {}
 		end
+
 
 		PlatesVisible[plate] = nil
 		extended.unit = ClearIndices(extended.unit)

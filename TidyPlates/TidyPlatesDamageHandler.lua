@@ -1,3 +1,4 @@
+-- File: TidyPlatesDamageHandler.lua
 local addonName, TidyPlates = ...
 local DamageDisplay = TidyPlates.DamageDisplay
 
@@ -16,6 +17,13 @@ frame:SetScript("OnEvent", function(_, event, ...)
 
 		DEFAULT_CHAT_FRAME:AddMessage(string.format("✨ SPELL_DAMAGE: %s dmg (spell: %s)", amount, spellName))
 		DamageDisplay:Show(destGUID, amount or 0, spellID)
+
+	elseif eventType == "SPELL_PERIODIC_DAMAGE" then
+		local spellID, spellName, amount = arg[9], arg[10], arg[12]
+
+		DEFAULT_CHAT_FRAME:AddMessage(string.format("🩸 SPELL_PERIODIC_DAMAGE: %s dmg (spell: %s)", amount, spellName))
+		DamageDisplay:Show(destGUID, amount or 0, spellID)
+
 	elseif eventType == "SWING_DAMAGE" then
 		local amount = arg[9]
 

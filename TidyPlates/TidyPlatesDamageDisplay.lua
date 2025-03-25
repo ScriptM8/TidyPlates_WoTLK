@@ -1,124 +1,111 @@
--- File: TidyPlatesDamageDisplay.lua (WoTLK-Compatible)
+-- File: TidyPlatesDamageDisplay.lua
 local addonName, TidyPlates = ...
 local DamageDisplay = {}
 
-local DAMAGE_FADE_DURATION = 1.0
-local MAX_DAMAGE_STACK_TIME = 0.3
+local DAMAGE_FADE_DURATION = 1.5
+local DAMAGE_FLOAT_DISTANCE = 40
+local MAX_DAMAGE_STACK_TIME = 0.5
 local MAX_DAMAGE_TEXTS = 5
-
 local meleeTexture = "Interface\\Icons\\Ability_MeleeDamage"
 
 local function CreateDamageWidget(parent)
-    local widget = CreateFrame("Frame", nil, parent)
-    widget:SetSize(1, 1)
-    widget:SetPoint("CENTER", parent, "CENTER", 0, 30) -- Directly above plate
-    widget.texts = {}
-    widget.icon = nil
-    widget:Show()
-    return widget
+	local widget = CreateFrame("Frame", nil, parent)
+	widget:SetSize(1, 1)
+	widget:SetPoint("CENTER", parent, "CENTER", 0, 0)
+	widget.texts = {}
+	return widget
 end
 
-local function CreateDamageText(parent)
-    local text = parent:CreateFontString(nil, "OVERLAY")
-    text:SetFont("Fonts\\FRIZQT__.TTF", 16, "OUTLINE")
-    text:SetTextColor(1, 0.9, 0, 1) -- Bright yellow
-    text:SetPoint("CENTER", parent, "CENTER", 0, 0)
+local function CreateDamageText(parent, amount, texture)
+	local frame = CreateFrame("Frame", nil, parent)
+	frame:SetSize(60, 20)
+	frame:SetPoint("BOTTOM", parent, "TOP", 0, 10)  -- fixed initial offset above plate
 
-    local ag = text:CreateAnimationGroup()
-    local fade = ag:CreateAnimation("Alpha")
-    fade:SetChange(-1) -- WoTLK-compatible
-    fade:SetDuration(DAMAGE_FADE_DURATION)
-    fade:SetSmoothing("OUT")
-    ag:SetScript("OnFinished", function() text:Hide() end)
-    text.anim = ag
-    return text
-end
+	local icon = frame:CreateTexture(nil, "OVERLAY")
+	icon:SetSize(16, 16)
+	icon:SetPoint("LEFT", frame, "LEFT", 0, 0)
+	icon:SetTexture(texture or meleeTexture)
+	frame.icon = icon
 
-local function CreateDamageIcon(parent)
-    local icon = parent:CreateTexture(nil, "OVERLAY")
-    icon:SetSize(20, 20)
-    icon:SetPoint("RIGHT", parent, "LEFT", -2, 0)
+	local text = frame:CreateFontString(nil, "OVERLAY")
+	text:SetFont("Fonts\\FRIZQT__.TTF", 14, "OUTLINE")
+	text:SetTextColor(1, 0.9, 0, 1)
+	text:SetPoint("LEFT", icon, "RIGHT", 4, 0)
+	text:SetText(amount)
+	frame.text = text
 
-    local ag = icon:CreateAnimationGroup()
-    local fade = ag:CreateAnimation("Alpha")
-    fade:SetChange(-1) -- WoTLK-compatible
-    fade:SetDuration(DAMAGE_FADE_DURATION)
-    fade:SetSmoothing("OUT")
-    ag:SetScript("OnFinished", function() icon:Hide() end)
-    icon.anim = ag
-    return icon
+	frame:SetAlpha(1)
+	frame:Show()
+
+	local elapsed = 0
+	local duration = DAMAGE_FADE_DURATION
+	local floatDist = DAMAGE_FLOAT_DISTANCE
+
+	frame:SetScript("OnUpdate", function(self, dt)
+		elapsed = elapsed + dt
+		if elapsed >= duration then
+			self:SetScript("OnUpdate", nil)
+			self:Hide()
+			return
+		end
+
+		local offset = (elapsed / duration) * floatDist
+		self:SetPoint("BOTTOM", parent, "TOP", 0, 10 + offset)
+
+		self:SetAlpha(1 - (elapsed / duration))
+	end)
+
+	return frame
 end
 
 local function PushDamageText(widget, amount, spellID)
-    local now = GetTime()
+	local now = GetTime()
 
-    -- Stack recent hits
-    local last = widget.texts[#widget.texts]
-    if last and now - last.time <= MAX_DAMAGE_STACK_TIME then
-        last.amount = last.amount + amount
-        last.text:SetText(last.amount)
-        if last.text.anim:IsPlaying() then last.text.anim:Stop() end
-        last.text:SetAlpha(1)
-        last.text.anim:Play()
-        return
-    end
+	-- Combine recent hits
+	local last = widget.texts[#widget.texts]
+	if last and now - last.time <= MAX_DAMAGE_STACK_TIME then
+		last.amount = last.amount + amount
+		last.frame.text:SetText(last.amount)
+		last.time = now -- refresh timer
+		return
+	end
 
-    if #widget.texts >= MAX_DAMAGE_TEXTS then
-        local removed = table.remove(widget.texts, 1)
-        removed.text:Hide()
-    end
+	if #widget.texts >= MAX_DAMAGE_TEXTS then
+		local old = table.remove(widget.texts, 1)
+		old.frame:SetScript("OnUpdate", nil)
+		old.frame:Hide()
+	end
 
-    local text = CreateDamageText(widget)
-    text:SetText(amount)
-    text:SetAlpha(1)
-    text:Show()
-    text.anim:Play()
+	-- New hits always appear at the same position
+	local texture = spellID and select(3, GetSpellInfo(spellID)) or meleeTexture
+	local frame = CreateDamageText(widget, amount, texture)
 
-    local icon = widget.icon or CreateDamageIcon(widget)
-    local texture = spellID and select(3, GetSpellInfo(spellID)) or meleeTexture
-    icon:SetTexture(texture)
-    icon:SetAlpha(1)
-    icon:Show()
-    icon.anim:Play()
-
-    widget.icon = icon
-    table.insert(widget.texts, { text = text, amount = amount, time = now })
+	table.insert(widget.texts, { frame = frame, amount = amount, time = now })
 end
 
 function DamageDisplay:Show(guid, amount, spellID)
-    local plate = TidyPlates.NameplatesByGUID[guid]
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("🛡️ Plate found: %s", plate and "Yes" or "No"))
+	local plate = TidyPlates.NameplatesByGUID[guid]
+	if not plate or not plate.extended then return end
+	local extended = plate.extended
 
-    if not plate or not plate.extended then
-        DEFAULT_CHAT_FRAME:AddMessage("❌ No plate or no extended frame.")
-        return
-    end
+	if not extended.DamageWidget then
+		extended.DamageWidget = CreateDamageWidget(extended)
+	end
 
-    local extended = plate.extended
-    if not extended.DamageWidget then
-        extended.DamageWidget = CreateDamageWidget(extended)
-        DEFAULT_CHAT_FRAME:AddMessage("🆕 Created DamageWidget")
-    end
-
-    PushDamageText(extended.DamageWidget, amount, spellID)
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("💥 Pushed dmg text: %s", amount))
+	PushDamageText(extended.DamageWidget, amount, spellID)
 end
 
 function DamageDisplay:Cleanup()
-    for plate in pairs(TidyPlates.NameplatesByVisible) do
-        local widget = plate.extended and plate.extended.DamageWidget
-        if widget then
-            for _, entry in ipairs(widget.texts) do
-                if entry.text.anim:IsPlaying() then entry.text.anim:Stop() end
-                entry.text:Hide()
-            end
-            if widget.icon and widget.icon.anim:IsPlaying() then
-                widget.icon.anim:Stop()
-            end
-            if widget.icon then widget.icon:Hide() end
-            widget.texts = {}
-        end
-    end
+	for plate in pairs(TidyPlates.NameplatesByVisible) do
+		if plate.extended and plate.extended.DamageWidget then
+			local widget = plate.extended.DamageWidget
+			for _, entry in ipairs(widget.texts) do
+				entry.frame:SetScript("OnUpdate", nil)
+				entry.frame:Hide()
+			end
+			widget.texts = {}
+		end
+	end
 end
 
 TidyPlates.DamageDisplay = DamageDisplay
