@@ -640,13 +640,18 @@ do
 		-- in TidyPlatesCore.lua OnHideNameplate:
 		if extended.DamageWidget then
 			local dw = extended.DamageWidget
-			for _, entry in ipairs(dw.texts or {}) do
-				entry.frame:SetScript("OnUpdate", nil)
-				entry.frame:Hide()
-			end
-			dw.texts = {}
-		end
 
+			-- Soft cleanup, don't move or detach widget
+			TidyPlates.After(1, function()
+				if dw and dw.texts then
+					for _, entry in ipairs(dw.texts) do
+						entry.frame:SetScript("OnUpdate", nil)
+						entry.frame:Hide()
+					end
+					dw.texts = {}
+				end
+			end)
+		end
 
 		PlatesVisible[plate] = nil
 		extended.unit = ClearIndices(extended.unit)
@@ -707,6 +712,13 @@ do
 		CheckNameplateStyle()
 		UpdateIndicator_CustomAlpha()
 		UpdateHitboxShape()
+
+		if extended.DamageWidget then
+			extended.DamageWidget:SetParent(extended)
+			extended.DamageWidget:ClearAllPoints()
+			extended.DamageWidget:SetPoint("CENTER", extended, "CENTER", 0, 0)
+			extended.DamageWidget:Show()
+		end
 
 		SetTargetQueue(plate, OnUpdateNameplate) -- Echo for a full update
 	end
