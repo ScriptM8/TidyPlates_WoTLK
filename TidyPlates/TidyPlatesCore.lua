@@ -637,22 +637,6 @@ do
 		bars.castbar:Hide()
 		unit.isCasting = false
 
-		-- in TidyPlatesCore.lua OnHideNameplate:
-		if extended.DamageWidget then
-			local dw = extended.DamageWidget
-
-			-- Soft cleanup, don't move or detach widget
-			TidyPlates.After(1, function()
-				if dw and dw.texts then
-					for _, entry in ipairs(dw.texts) do
-						entry.frame:SetScript("OnUpdate", nil)
-						entry.frame:Hide()
-					end
-					dw.texts = {}
-				end
-			end)
-		end
-
 		PlatesVisible[plate] = nil
 		extended.unit = ClearIndices(extended.unit)
 		extended.unitcache = ClearIndices(extended.unitcache)
@@ -662,7 +646,21 @@ do
 		if plate == currentTarget then
 			currentTarget = nil
 		end
+		if extended.DamageWidget and extended.DamageWidget.texts then
+			local widget = extended.DamageWidget
+			for i = #widget.texts, 1, -1 do
+				local dmgFrame = widget.texts[i].frame
+				if dmgFrame and TidyPlates.DamageDisplay.DetachDamageText then
+					-- DEFAULT_CHAT_FRAME:AddMessage("OnHideNameplate: Detaching damage frame " .. tostring(dmgFrame))
+					TidyPlates.DamageDisplay.DetachDamageText(dmgFrame)
+					table.insert(TidyPlates.DamageDisplay.DetachedTexts, dmgFrame)
+				end
+				table.remove(widget.texts, i)
+			end
+		end
+
 	end
+
 
 	-- OnEchoNewNameplate: Intended to reduce CPU by bypassing the full update, and only checking the alpha value
 	function OnEchoNewNameplate(plate)
