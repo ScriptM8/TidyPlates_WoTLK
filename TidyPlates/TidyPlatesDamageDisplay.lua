@@ -178,15 +178,26 @@ end
 
 function DamageDisplay:Show(guid, amount, spellID, isCrit)
     local plate = TidyPlates.NameplatesByGUID[guid]
-    if not plate or not plate.extended then return end
 
-    local extended = plate.extended
-    if not extended.DamageWidget then
-        extended.DamageWidget = CreateDamageWidget(extended)
+    local texture = spellID and select(3, GetSpellInfo(spellID)) or meleeTexture
+
+    -- If nameplate is available, show damage normally.
+    if plate and plate.extended then
+        local extended = plate.extended
+        if not extended.DamageWidget then
+            extended.DamageWidget = CreateDamageWidget(extended)
+        end
+        PushDamageText(extended.DamageWidget, tonumber(amount), spellID, nil, isCrit)
+    else
+        -- No nameplate: Show damage at fixed top-middle location.
+        if not self.ScreenDamageWidget then
+            self.ScreenDamageWidget = CreateDamageWidget(UIParent)
+            self.ScreenDamageWidget:SetPoint("TOP", UIParent, "TOP", 0, -100) -- Adjust vertical offset here.
+        end
+        PushDamageText(self.ScreenDamageWidget, tonumber(amount), spellID, nil, isCrit)
     end
-
-    PushDamageText(extended.DamageWidget, tonumber(amount), spellID, nil, isCrit)
 end
+
 
 
 function DamageDisplay:ShowMiss(guid, missType, spellID)
@@ -214,6 +225,15 @@ function DamageDisplay:Cleanup()
 				widget.texts = {}
 			end
 		end
+
+		-- Cleanup ScreenDamageWidget if it exists
+        if self.ScreenDamageWidget and self.ScreenDamageWidget.texts then
+            for _, entry in ipairs(self.ScreenDamageWidget.texts) do
+                entry.frame:SetScript("OnUpdate", nil)
+                entry.frame:Hide()
+            end
+            self.ScreenDamageWidget.texts = {}
+        end
 	end)
 end
 
